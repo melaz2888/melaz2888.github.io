@@ -30,7 +30,70 @@ header {
   padding: 30px 20px;
   text-align: center;
 }
+#logos img {
+  height: 50px;
+  margin: 0 10px;
+}
 
+#logos {
+  text-align: center;
+  margin-bottom: 20px;
+}
+
+/* Hero Section */
+#hero {
+  background: linear-gradient(120deg, #00539C, #003366); /* Clean gradient */
+  color: white;
+  text-align: center;
+  padding: 100px 20px;
+  position: relative;
+}
+
+.hero-content {
+  max-width: 800px;
+  margin: 0 auto;
+}
+
+#hero h1 {
+  font-size: 48px;
+  margin: 10px 0;
+}
+
+#hero h2 {
+  font-size: 20px;
+  font-weight: 300;
+  margin: 20px 0;
+  line-height: 1.5;
+}
+
+#hero-pic {
+  width: 150px;
+  height: 150px;
+  border-radius: 50%;
+  border: 3px solid white;
+  margin-bottom: 20px;
+}
+
+nav ul {
+  list-style: none;
+  padding: 0;
+}
+
+nav li {
+  display: inline-block;
+  margin: 0 15px;
+}
+
+nav a {
+  color: white;
+  text-decoration: none;
+  font-weight: bold;
+  font-size: 16px;
+}
+
+nav a:hover {
+  text-decoration: underline;
+}
 
 header h1 {
   margin-bottom: 10px;
