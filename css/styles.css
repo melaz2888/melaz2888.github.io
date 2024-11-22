@@ -34,6 +34,7 @@ header {
 #logos {
   display: flex;
   justify-content: center;
+  flex-wrap: wrap; /* Allows logos to stack vertically on smaller screens */
   gap: 15px;
   margin-bottom: 20px;
 }
@@ -43,12 +44,14 @@ header {
   width: auto;
 }
 
+/* Profile Picture */
 #profile-pic {
   width: 200px;
   height: 200px;
   border-radius: 50%;
   border: 4px solid #00539C;
   margin: 20px auto;
+  display: block;
 }
 
 /* Navigation Styles */
@@ -130,17 +133,14 @@ footer p {
 
 /* Responsive Design */
 @media (max-width: 600px) {
+  #logos {
+    flex-direction: column; /* Stacks logos vertically */
+    align-items: center; /* Centers them */
+  }
+
   nav li {
     display: block;
     margin: 10px 0;
-  }
-
-  header h1 {
-    font-size: 28px;
-  }
-
-  header h2 {
-    font-size: 16px;
   }
 
   #profile-pic {
@@ -148,4 +148,5 @@ footer p {
     height: 150px;
   }
 }
+
 
