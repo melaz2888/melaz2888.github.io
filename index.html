@@ -1,171 +1,250 @@
-<!DOCTYPE html>
-<html lang="en">
-<head>
-  <meta charset="UTF-8">
-  <title>Mohammed El Azhar | Quantum & Photonics Engineer</title>
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <link rel="stylesheet" href="css/styles.css">
-</head>
-<body>
-  <header>
-    <div id="logos">
-      <img src="institut_optique_resized.png" alt="Institut d'Optique Logo">
-      <img src="universite_paris_saclay_resized.png" alt="Université Paris-Saclay Logo">
-      <img src="ens_paris_saclay_resized.png" alt="ENS Paris-Saclay Logo">
-    </div>
-    <img src="id_pic.jpg" alt="Mohammed El Azhar" id="profile-pic">
-    <nav>
-      <ul>
-        <li><a href="#about">About Me</a></li>
-        <li><a href="#experience">Experience</a></li>
-        <li><a href="#education">Education</a></li>
-        <li><a href="#publications">Publications</a></li>
-        <li><a href="#skills">Skills</a></li>
-        <li><a href="#contact">Contact</a></li>
-      </ul>
-    </nav>
-  </header>
+import numpy as np
+import pandas as pd
+import matplotlib.pyplot as plt
+from sklearn.linear_model import LinearRegression
 
-  <main>
-    <!-- About Me Section -->
-    <section id="about">
-      <h3>About Me</h3>
-      <p>Hi! I'm <strong>Mohammed</strong>, a Quantum & Photonics Engineering student based in Gif-sur-Yvette, France. With a solid foundation from prestigious institutions such as <strong>Institut d'Optique Graduate School</strong>*, <strong>Université Paris-Saclay</strong>, and <strong>ENS Paris-Saclay</strong>, I specialize in quantum computing, photonics, and machine learning. My research interests center on Quantum information theory, many-body physics, stochastic processes, and the interplay between quantum mechanics and deep learning, particularly in exploring neural quantum states and physics-informed machine-learning models.</p>
-      <p class="note">* The Institut d'Optique is home to the Charles Fabry Laboratory, renowned for groundbreaking research in optics and quantum physics, including the work of Alain Aspect on quantum entanglement, which earned him the Nobel Prize in Physics. For more details, <a href="Physic_Nobel_2022_FV_0.pdf" target="_blank" rel="noopener noreferrer">view the official announcement (PDF)</a>.</p>
-    </section>
+# ---------- KF core ----------
+def predict(theta, P, Q):
+    """theta_{k|k-1} = theta_{k-1|k-1},  P_{k|k-1} = P_{k-1|k-1} + Q"""
+    return theta, P + Q
+
+def update(theta_pred, P_pred, y, x, r):
+    """
+    Update with feature vector x (shape: (n,)), target y (scalar),
+    observation noise variance r (scalar).
+    """
+    # Innovation
+    y_pred = float(np.dot(x, theta_pred))           # scalar
+    innov  = float(y - y_pred)                      # scalar
+    # Innovation variance S = x^T P x + r
+    S = float(np.dot(x, np.dot(P_pred, x)) + r)
+    if S <= 1e-12: S = 1e-12
+    # Gain K = P x / S
+    K = np.dot(P_pred, x) / S                       # shape (n,)
+    # State update
+    theta = theta_pred + K * innov                  # (n,)
+    # Joseph-stabilized covariance update: P = (I-Kx^T)P(I-Kx^T)^T + K r K^T
+    n = theta_pred.shape[0]
+    I = np.eye(n)
+    KH = np.outer(K, x)                             # (n,n)
+    P = np.dot(np.dot(I - KH, P_pred), (I - KH).T) + (r * np.outer(K, K))
+    P = 0.5 * (P + P.T)                             # symmetrize
+    return theta, P
+
+def run_online_readout(train_features, train_targets,
+                       test_features,  test_targets,
+                       q=1e-4, r=None, p0_scale=1.0,
+                       fit_intercept=False):
+    """
+    Online KF for time-varying linear readout:
+      theta_k = theta_{k-1} + w_k,  y_k = x_k^T theta_k + v_k.
+    Args:
+      q: process noise variance (Q = q * I)
+      r: observation noise variance; if None, estimate from train residuals
+      p0_scale: initial covariance scale (P0 = p0_scale * I)
+      fit_intercept: if True, include intercept in the model by augmenting X with 1's
+                     (and initialize accordingly). Default False (recommended if features sum to 1).
+    """
+    Xtr = np.asarray(train_features, float)
+    ytr = np.asarray(train_targets,  float).reshape(-1)
+    Xte = np.asarray(test_features,  float)
+    yte = np.asarray(test_targets,   float).reshape(-1)
     
+    # Optionally add intercept column
+    if fit_intercept:
+        Xtr = np.c_[Xtr, np.ones(len(Xtr))]
+        Xte = np.c_[Xte, np.ones(len(Xte))]
+    
+    n = Xtr.shape[1]
+    
+    # OLS init (consistent with fit_intercept)
+    reg = LinearRegression(fit_intercept=False).fit(Xtr, ytr)
+    theta = reg.coef_.astype(float).copy()          # shape (n,)
+    
+    # Initial covariance - FIXED variance calculation
+    res_tr = ytr - np.dot(Xtr, theta)
+    if len(res_tr) > max(1, n):
+        r_hat = float(np.var(res_tr, ddof=n))
+        if r_hat <= 0 or not np.isfinite(r_hat):
+            r_hat = 1.0
+    else:
+        r_hat = 1.0
+        
+    if r is None: r = r_hat
+    P = np.eye(n) * (p0_scale * r_hat)
+    Q = np.eye(n) * float(q)
+    
+    preds = np.empty(len(Xte), float)
+    for i, (x, y) in enumerate(zip(Xte, yte)):
+        # Predict
+        theta_pred, P_pred = predict(theta, P, Q)
+        # One-step-ahead prediction (no leakage)
+        preds[i] = float(np.dot(x, theta_pred))
+        # Update with observed target
+        theta, P = update(theta_pred, P_pred, y, x, r)
+    
+    return preds
 
-    <!-- Experience Section -->
-    <section id="experience">
-      <h3>Professional Experience</h3>
-      <div class="job">
-        <h4>Quantum Algorithms & Machine Learning Intern</h4>
-        <p><em>Quandela | Paris, France | February 2024 – August 2024</em></p>
-        <ul>
-          <li>Developed market competitive Classical Machine learning models for Fallen angels prediction</li>
-          <li>Developed Quantum enhanced Random forests, Quantum version of the boosting algorithm and other state of the art QML algorithms, leveraging boson-sampling techniques for advanced classification tasks.</li>
-          <li>Engineered data encoding and efficient feature extraction methods for integrating large datasets into quantum chips.</li>
-          <li>Designed a hybrid(Classical&Quantum) boosting algorithm that synergizes quantum and classical machine learning models.</li>
-          <li>Applied these methods to predict suboptimal investments in collaboration with a large Investment Bank, surpassing classical benchmarks.</li>
-        </ul>
-      </div>
-      <div class="job">
-        <h4>Data Science & Photonics R&D Intern</h4>
-        <p><em>Enovasense | Paris, France | May 2023 – August 2023</em></p>
-        <ul>
-          <li>Led Python-based data analytics to identify key features in thickness measurement technology.</li>
-          <li>Automated image processing and measurement software for large-scale sample assessments.</li>
-          <li>Developed optical simulations to predict and enhance device performance.</li>
-        </ul>
-      </div>
-      <div class="job">
-        <h4>Math & Physics Tutor</h4>
-        <p><em>Institut Villebon Charpak | Orsay, France | October 2021 – April 2022</em></p>
-        <ul>
-          <li>Provided weekly tutoring in mathematics and physics to college freshmen and sophomores from underserved communities.</li>
-          <li>Facilitated understanding of complex concepts through interactive teaching methods.</li>
-        </ul>
-      </div>
-    </section>
+# Load reservoir states
+states_df = pd.read_csv('reservoir_states_general_d1d7_tempsm95_dtw.csv')
+states_df['date'] = pd.to_datetime(states_df['date'])
 
-    <!-- Education Section -->
-    <section id="education">
-      <h3>Education</h3>
-      <div class="education">
-        <h4>Institut d’Optique Graduate School (IOGS)</h4>
-        <p><em>B.Sc and M.Sc in Photonics Engineering | Palaiseau, France | 2021 – 2025</em></p>
-        <ul>
-          <li>Relevant coursework: Optics and Photonics, Quantum Physics, Probability Theory, Computer Science, Signal and Image Processing, Machine Learning.</li>
-          <li>GPA: 3.7/4.0</li>
-        </ul>
-      </div>
-      <div class="education">
-        <h4>Université Paris-Saclay</h4>
-        <p><em>M.Sc in Quantum, Light, Matter, and Nanoscience (QLMN) | Paris-Saclay, France | 2024 – 2025</em></p>
-        <ul>
-          <li>Double degree with Institut d’Optique Graduate School.</li>
-          <li>Coursework: Quantum Optics, Physics of Quantum Information, Laser Physics, Light-Matter Interaction, Quantum Sensing, Quantum Communication.</li>
-        </ul>
-      </div>
-      <div class="education">
-        <h4>École Normale Supérieure (ENS) Paris-Saclay</h4>
-        <p><em>Advanced Research year in Quantum Technologies (ARTEQ) | Paris-Saclay, France | 2023 – 2024</em></p>
-        <ul>
-          <li>Coursework: Quantum Hardware, Quantum Computing, Theoretical Computer Science, Neuromorphic Engineering, Quantum Information, Cryptography.</li>
-          <li>Thesis : Fallen Angels Prediction using Photonic Neural Networks , Hybrid Approach @ Quandela </li>
-        </ul>
-      </div>
-      <div class="education">
-        <h4>Université de Bordeaux</h4>
-        <p><em>M.Sc LM&iN (Light, matter and interaction) | Talence, France | 2022 – 2023</em></p>
-        <ul>
-          <li>Relevant Coursework: Statistical Physics, Ultra-fast optics, Plasma Physics  </li>
-          <li>M.Sc Thesis : Data analysis and model optimization for coating thickness measurement technology @ Enovasense </li>
-        </ul>
-      </div>      
-      <div class="education">
-        <h4>Lycée Omar-Ibn-Al-Khattab</h4>
-        <p><em>Preparatory Classes | Meknes, Morocco | 2019 – 2021</em></p>
-        <ul>
-          <li>Intensive program in advanced mathematics, physics, and computer science.</li>
-          <li>TIPE Thesis : Markov Chains to simulate virus spread (SCEI2021)</li>
-        </ul>
-      </div>
-    </section>
+# Load Load data from experts file
+load_df = pd.read_csv('final_experts_with_rf.csv')
+load_df['date'] = pd.to_datetime(load_df['date'])
 
-    <!-- Publications & Projects Section -->
-    <section id="publications">
-      <h3>Publications & Projects</h3>
-      <ul>
-        <li><strong>Upcoming Publication:</strong> Co-authoring a paper on developing a novel hybrid quantum-classical classifier using a photonic processor.</li>
-        <li><strong>QuantumNest 2024 – Sicily:</strong> Attended to the Quantum Nest Summer School program , Presented Master's Thesis to leading physicists and students, engaging in in-depth discussions.</li>
-        <li><strong>Quandela x ENS Paris-Saclay Hackathon:</strong> Team participation to a Hackathon : Developed a photonic reservoir for EDF ( Electricité de France ) to forecast energy production with high fidelity.</li>
-        <li>
-          <strong>Advanced Epidemiological Modeling of COVID-19:</strong>In the context of my CPGE TIPE (Bachelor Thesis Equivalent), I conducted mathematical modeling using Markov chains to simulate virus spread and assess public health strategies. Analytical and numerical study. 
-          <a href="Markov_chain_Epidemiology.pdf" target="_blank" rel="noopener noreferrer">(View PDF)</a>
-        </li>
-      </ul>
-    </section>
+# Merge the dataframes on date
+full_df = states_df.merge(load_df[['date', 'Load', 'qrc_lin_readout', 'qrc_rf_readout']], on='date', how='inner')
 
-    <!-- Awards Section -->
-    <section id="awards">
-      <h3>Awards & Honors</h3>
-      <ul>
-        <li><strong>2023:</strong> Quantum-Saclay Scholarship for contributions to research in quantum technologies at Paris-Saclay.</li>
-        <li><strong>2021 – 2025:</strong> FIRSI Foundation Excellence Scholarship awarded to top-performing Moroccan students in France's premier engineering school entry exams.</li>
-        <li><strong>2019 – 2021:</strong> "Istihqaq" Merit Scholarship for outstanding baccalaureate graduates in Morocco.</li>
-      </ul>
-    </section>
+print(f"Merged dataframe shape: {full_df.shape}")
 
-    <!-- Skills Section -->
-    <section id="skills">
-      <h3>Skills</h3>
-      <ul>
-        <li><strong>Programming Languages:</strong> Python, C, MatLab</li>
-        <li><strong>Quantum Frameworks:</strong> Qiskit, Perceval, PennyLane</li>
-        <li><strong>Classical Machine Learning:</strong> Seasoned in leveraging state-of-the-art machine learning models and tools. </li>
-        <li><strong>Simulations:</strong> Monte Carlo Methods, Markov Models</li>
-        <li><strong>Languages:</strong>
-          <ul>
-            <li>French (Native/Bilingual)</li>
-            <li>English (Full Professional Proficiency)</li>
-            <li>Arabic (Native)</li>
-            <li>Japanese (Beginner)</li>
-          </ul>
-        </li>
-      </ul>
-    </section>
+# Define time periods
+TRAIN_START = pd.Timestamp("2018-01-01T00:00:00Z")
+TRAIN_END = pd.Timestamp("2020-03-10T23:30:00Z")
+TEST_START = pd.Timestamp("2020-03-11T00:00:00Z")
+TEST_END = pd.Timestamp("2024-09-12T23:30:00Z")
 
-    <!-- Contact Section -->
-    <section id="contact">
-      <h3>Contact Information</h3>
-      <p><strong>Email:</strong> <a href="mailto:mohammedelazhar@hotmail.com">mohammedelazhar@hotmail.com</a> | <a href="mailto:mohammed.el-azhar@institutoptique.fr">mohammed.el-azhar@institutoptique.fr</a></p>
-      <p><strong>Location:</strong> Gif-sur-Yvette, France</p>
-    </section>
-  </main>
+window_mask = (full_df["date"] >= TRAIN_START) & (full_df["date"] <= TEST_END)
+full_df = full_df.loc[window_mask].reset_index(drop=True)
+train_mask = (full_df["date"] >= TRAIN_START) & (full_df["date"] <= TRAIN_END)
+test_mask = (full_df["date"] >= TEST_START) & (full_df["date"] <= TEST_END)
 
-  <footer>
-    <p>&copy; 2023 Mohammed El Azhar</p>
-  </footer>
-</body>
-</html>
+# Get reservoir state columns (state_0, state_1, etc.)
+state_cols = [col for col in full_df.columns if col.startswith('state_')]
+print(f"Using {len(state_cols)} reservoir state features: {state_cols}")
+
+# Check if we have state columns
+if not state_cols:
+    raise ValueError("No columns starting with 'state_' found in the data")
+
+# Create result dataframe
+result_df = full_df.copy()
+result_df['qrc_online_readout'] = np.nan
+
+# Storage for RMSE per slot
+slot_rmse_data = []
+
+# Process each of 48 half-hour slots
+for slot in range(48):
+    slot_indices = list(range(slot, len(full_df), 48))
+    slot_df = full_df.iloc[slot_indices].copy()
+    
+    slot_train_mask = train_mask[slot_indices]
+    slot_test_mask = test_mask[slot_indices]
+    
+    # Get clean data for this slot
+    slot_train = slot_df[slot_train_mask].dropna(subset=['Load'] + state_cols)
+    slot_test = slot_df[slot_test_mask].dropna(subset=['Load'] + state_cols)
+    
+    if len(slot_train) == 0 or len(slot_test) == 0:
+        print(f"Skipping slot {slot}: insufficient data (train: {len(slot_train)}, test: {len(slot_test)})")
+        continue
+    
+    # Extract features and targets
+    train_features = slot_train[state_cols].values
+    train_targets = slot_train['Load'].values
+    test_features = slot_test[state_cols].values
+    test_targets = slot_test['Load'].values
+    
+    # Set noise parameters based on training data - FIXED calculation
+    try:
+        temp_reg = LinearRegression(fit_intercept=False).fit(train_features, train_targets)
+        train_residuals = train_targets - temp_reg.predict(train_features)
+        
+        # Fixed variance calculation
+        if len(train_residuals) > max(1, len(state_cols)):
+            train_var = float(np.var(train_residuals, ddof=len(state_cols)))
+            if train_var <= 0 or not np.isfinite(train_var):
+                train_var = 1.0
+        else:
+            train_var = 1.0
+        
+        q = 1e-4   # process variance (tune per slot if you like)
+        r = train_var  # simple, sensible default for observation variance
+        
+        # Run online readout (choose fit_intercept=False unless you explicitly want one)
+        online_predictions = run_online_readout(
+            train_features, train_targets,
+            test_features,  test_targets,
+            q=q, r=r, p0_scale=1.0,
+            fit_intercept=False
+        )
+        
+        # Update result dataframe
+        test_indices = slot_test.index
+        for i, idx in enumerate(test_indices):
+            result_df.loc[idx, 'qrc_online_readout'] = online_predictions[i]
+        
+        # Calculate RMSE for this slot
+        # Compare with offline linear readout
+        rmse_offline = np.sqrt(np.mean((slot_test['Load'].values - slot_test['qrc_lin_readout'].values)**2))
+        rmse_online = np.sqrt(np.mean((test_targets - online_predictions)**2))
+        
+        slot_rmse_data.append({
+            'slot': slot,
+            'offline': rmse_offline,
+            'online': rmse_online
+        })
+        
+    except Exception as e:
+        print(f"Error processing slot {slot}: {e}")
+        continue
+
+# Save results
+result_df.to_csv('predictions_with_online_readout.csv', index=False)
+
+# Calculate global RMSE on test set
+test_data = result_df[test_mask].dropna(subset=['Load', 'qrc_online_readout', 'qrc_lin_readout'])
+
+if len(test_data) == 0:
+    print("Warning: No test data available after filtering")
+else:
+    global_rmse_offline = np.sqrt(np.mean((test_data['Load'] - test_data['qrc_lin_readout'])**2))
+    global_rmse_online = np.sqrt(np.mean((test_data['Load'] - test_data['qrc_online_readout'])**2))
+
+    # Create plot
+    if slot_rmse_data:  # Only plot if we have data
+        slot_rmse_df = pd.DataFrame(slot_rmse_data)
+
+        fig, (ax1, ax2) = plt.subplots(1, 2, figsize=(15, 6))
+
+        # RMSE by slot
+        slots = slot_rmse_df['slot'].values
+        ax1.plot(slots, slot_rmse_df['offline'], 'b-', label='QRC Linear', marker='o', markersize=3)
+        ax1.plot(slots, slot_rmse_df['online'], 'r-', label='Online Readout', marker='s', markersize=3)
+        ax1.axhline(y=global_rmse_offline, color='b', linestyle='--', alpha=0.7, 
+                   label=f'Global Linear: {global_rmse_offline:.2f}')
+        ax1.axhline(y=global_rmse_online, color='r', linestyle='--', alpha=0.7, 
+                   label=f'Global Online: {global_rmse_online:.2f}')
+        ax1.set_xlabel('Half-hour Slot')
+        ax1.set_ylabel('RMSE')
+        ax1.set_title('QRC Online Readout: RMSE by Slot')
+        ax1.legend()
+        ax1.grid(True, alpha=0.3)
+        ax1.set_xticks(range(0, 48, 6))
+
+        # Improvement percentage
+        improvement = (1 - slot_rmse_df['online'] / slot_rmse_df['offline']) * 100
+        ax2.bar(slots, improvement, alpha=0.7, color='green')
+        ax2.axhline(y=0, color='k', linestyle='--', alpha=0.3)
+        global_improvement = (1 - global_rmse_online / global_rmse_offline) * 100
+        ax2.axhline(y=global_improvement, color='red', linestyle='--', alpha=0.7,
+                   label=f'Global Improvement: {global_improvement:.1f}%')
+        ax2.set_xlabel('Half-hour Slot')
+        ax2.set_ylabel('RMSE Improvement (%)')
+        ax2.set_title('Online vs Offline Readout Improvement')
+        ax2.legend()
+        ax2.grid(True, alpha=0.3)
+        ax2.set_xticks(range(0, 48, 6))
+
+        plt.tight_layout()
+        plt.show()
+
+        print(f"Global RMSE Results:")
+        print(f"QRC Linear (offline): {global_rmse_offline:.3f}")
+        print(f"QRC Online Readout: {global_rmse_online:.3f}")
+        print(f"Improvement: {global_improvement:.1f}%")
+    else:
+        print("No slot data to plot")
+
+print(f"Saved results to: predictions_with_online_readout.csv")
