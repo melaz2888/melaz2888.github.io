@@ -1,250 +1,269 @@
-import numpy as np
-import pandas as pd
-import matplotlib.pyplot as plt
-from sklearn.linear_model import LinearRegression
+<!DOCTYPE html>
+<html lang="en" class="scroll-smooth">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Mohammed El Azhar — Quantum & ML Engineer</title>
+  <meta name="description" content="Portfolio of Mohammed El Azhar — Quantum & Machine Learning Engineer (EDF R&D OSIRIS; ex-Quandela–CACIB)." />
+  <meta property="og:title" content="Mohammed El Azhar — Quantum & ML Engineer" />
+  <meta property="og:description" content="Portfolio of Mohammed El Azhar — Quantum & Machine Learning Engineer (EDF R&D OSIRIS; ex-Quandela–CACIB)." />
+  <meta property="og:type" content="website" />
+  <meta name="theme-color" content="#0ea5e9" />
+  <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'%3E%3Ccircle cx='50' cy='50' r='48' fill='%230ea5e9'/%3E%3Ctext x='50' y='60' text-anchor='middle' font-size='52' fill='white' font-family='sans-serif'%3EM%3C/text%3E%3C/svg%3E" />
+  <script src="https://cdn.tailwindcss.com"></script>
+  <style>
+    .glass { backdrop-filter: blur(12px); background: rgba(255,255,255,0.06); border: 1px solid rgba(255,255,255,0.1); }
+    .gradient-text { background: linear-gradient(90deg,#60a5fa,#22d3ee,#a78bfa,#60a5fa); -webkit-background-clip: text; background-clip: text; color: transparent; background-size: 300% 100%; animation: shift 12s linear infinite; }
+    @keyframes shift { 0%{background-position:0% 0} 100%{background-position:300% 0}}
+    .shine { position: relative; overflow: hidden; }
+    .shine::after { content:''; position:absolute; top:-120%; left:-120%; width:240%; height:240%; background: radial-gradient(60% 60% at 50% 50%, rgba(255,255,255,0.08), transparent 60%); transform: rotate(0deg); animation: spin 18s linear infinite; }
+    @keyframes spin { to { transform: rotate(360deg); } }
+    .neon-border { box-shadow: 0 0 0 1px rgba(59,130,246,0.35), 0 0 40px rgba(59,130,246,0.25) inset; }
+    .tag { font-size: 0.75rem; padding: 0.25rem 0.75rem; border-radius: 9999px; background: rgba(14,165,233,0.1); border: 1px solid rgba(56,189,248,0.3); color: #bae6fd; }
+  </style>
+  <script>
+    (function(){
+      const saved = localStorage.getItem('theme');
+      const prefersDark = window.matchMedia('(prefers-color-scheme: dark)').matches;
+      if ((saved === 'dark') || (!saved && prefersDark)) document.documentElement.classList.add('dark');
+    })();
+  </script>
+  <script type="application/ld+json">
+  {
+    "@context": "https://schema.org",
+    "@type": "Person",
+    "name": "Mohammed El Azhar",
+    "jobTitle": "Quantum & Machine Learning Engineer",
+    "address": {"@type":"PostalAddress","addressLocality":"Paris","addressCountry":"FR"},
+    "email": "mailto:mohammedelazhar@hotmail.com",
+    "url": "https://melaz2888.github.io",
+    "sameAs": [
+      "https://github.com/melaz2888",
+      "https://www.linkedin.com/in/mohammed-el-azhar-45836715a"
+    ]
+  }
+  </script>
+</head>
+<body class="bg-slate-950 text-slate-200 selection:bg-sky-300 selection:text-slate-900">
+  <div class="fixed inset-0 -z-10 overflow-hidden">
+    <div class="absolute -top-24 -left-24 w-[40rem] h-[40rem] bg-fuchsia-500/20 blur-3xl rounded-full mix-blend-screen"></div>
+    <div class="absolute -bottom-24 -right-24 w-[40rem] h-[40rem] bg-sky-500/20 blur-3xl rounded-full mix-blend-screen"></div>
+  </div>
 
-# ---------- KF core ----------
-def predict(theta, P, Q):
-    """theta_{k|k-1} = theta_{k-1|k-1},  P_{k|k-1} = P_{k-1|k-1} + Q"""
-    return theta, P + Q
+  <header class="sticky top-0 z-50 backdrop-blur supports-[backdrop-filter]:bg-slate-950/40 border-b border-white/10">
+    <div class="max-w-6xl mx-auto px-4 py-3 flex items-center justify-between">
+      <a href="#home" class="font-semibold tracking-tight text-slate-100">M. El Azhar</a>
+      <nav class="hidden md:flex items-center gap-6 text-sm">
+        <a href="#about" class="hover:text-white/90">About</a>
+        <a href="#experience" class="hover:text-white/90">Experience</a>
+        <a href="#projects" class="hover:text-white/90">Projects</a>
+        <a href="#skills" class="hover:text-white/90">Skills</a>
+        <a href="#contact" class="hover:text-white/90">Hire me</a>
+      </nav>
+      <div class="flex items-center gap-2">
+        <button id="themeToggle" class="glass px-3 py-1.5 rounded-xl text-xs border border-white/10">Toggle theme</button>
+        <a href="mailto:mohammedelazhar@hotmail.com" class="hidden sm:inline-flex bg-sky-500 hover:bg-sky-400 text-slate-900 font-medium px-4 py-1.5 rounded-xl">Hire me</a>
+      </div>
+    </div>
+  </header>
 
-def update(theta_pred, P_pred, y, x, r):
-    """
-    Update with feature vector x (shape: (n,)), target y (scalar),
-    observation noise variance r (scalar).
-    """
-    # Innovation
-    y_pred = float(np.dot(x, theta_pred))           # scalar
-    innov  = float(y - y_pred)                      # scalar
-    # Innovation variance S = x^T P x + r
-    S = float(np.dot(x, np.dot(P_pred, x)) + r)
-    if S <= 1e-12: S = 1e-12
-    # Gain K = P x / S
-    K = np.dot(P_pred, x) / S                       # shape (n,)
-    # State update
-    theta = theta_pred + K * innov                  # (n,)
-    # Joseph-stabilized covariance update: P = (I-Kx^T)P(I-Kx^T)^T + K r K^T
-    n = theta_pred.shape[0]
-    I = np.eye(n)
-    KH = np.outer(K, x)                             # (n,n)
-    P = np.dot(np.dot(I - KH, P_pred), (I - KH).T) + (r * np.outer(K, K))
-    P = 0.5 * (P + P.T)                             # symmetrize
-    return theta, P
+  <!-- Hero -->
+  <section id="home" class="relative">
+    <div class="max-w-6xl mx-auto px-4 py-20 md:py-28 grid md:grid-cols-2 gap-10 items-center">
+      <div>
+        <h1 class="text-4xl md:text-6xl font-extrabold leading-tight shine">
+          Mohammed <span class="gradient-text">El Azhar</span>
+        </h1>
+        <p class="mt-4 text-lg text-slate-300 max-w-xl">Quantum & Machine Learning Engineer — EDF R&D (OSIRIS, Forecasting). Previously Quantum ML @ Quandela × CACIB. Based in Paris, FR.</p>
+        <div class="mt-6 flex flex-wrap gap-3">
+          <span class="tag">Python</span>
+          <span class="tag">Time‑Series Forecasting</span>
+          <span class="tag">Quantum Reservoirs</span>
+          <span class="tag">Perceval</span>
+          <span class="tag">Qiskit</span>
+        </div>
+        <div class="mt-8 flex items-center gap-3">
+          <a href="#projects" class="bg-white text-slate-900 hover:bg-slate-200 font-medium px-5 py-2 rounded-xl">See projects</a>
+          <a href="https://github.com/melaz2888" target="_blank" class="glass px-5 py-2 rounded-xl border border-white/10">GitHub</a>
+          <a href="https://www.linkedin.com/in/mohammed-el-azhar-45836715a" target="_blank" class="glass px-5 py-2 rounded-xl border border-white/10">LinkedIn</a>
+        </div>
+      </div>
+      <div class="flex justify-center md:justify-end">
+        <img src="https://melaz2888.github.io/id_pic.jpg" alt="Mohammed El Azhar headshot" class="size-56 md:size-72 rounded-2xl neon-border object-cover"/>
+      </div>
+    </div>
+  </section>
 
-def run_online_readout(train_features, train_targets,
-                       test_features,  test_targets,
-                       q=1e-4, r=None, p0_scale=1.0,
-                       fit_intercept=False):
-    """
-    Online KF for time-varying linear readout:
-      theta_k = theta_{k-1} + w_k,  y_k = x_k^T theta_k + v_k.
-    Args:
-      q: process noise variance (Q = q * I)
-      r: observation noise variance; if None, estimate from train residuals
-      p0_scale: initial covariance scale (P0 = p0_scale * I)
-      fit_intercept: if True, include intercept in the model by augmenting X with 1's
-                     (and initialize accordingly). Default False (recommended if features sum to 1).
-    """
-    Xtr = np.asarray(train_features, float)
-    ytr = np.asarray(train_targets,  float).reshape(-1)
-    Xte = np.asarray(test_features,  float)
-    yte = np.asarray(test_targets,   float).reshape(-1)
-    
-    # Optionally add intercept column
-    if fit_intercept:
-        Xtr = np.c_[Xtr, np.ones(len(Xtr))]
-        Xte = np.c_[Xte, np.ones(len(Xte))]
-    
-    n = Xtr.shape[1]
-    
-    # OLS init (consistent with fit_intercept)
-    reg = LinearRegression(fit_intercept=False).fit(Xtr, ytr)
-    theta = reg.coef_.astype(float).copy()          # shape (n,)
-    
-    # Initial covariance - FIXED variance calculation
-    res_tr = ytr - np.dot(Xtr, theta)
-    if len(res_tr) > max(1, n):
-        r_hat = float(np.var(res_tr, ddof=n))
-        if r_hat <= 0 or not np.isfinite(r_hat):
-            r_hat = 1.0
-    else:
-        r_hat = 1.0
-        
-    if r is None: r = r_hat
-    P = np.eye(n) * (p0_scale * r_hat)
-    Q = np.eye(n) * float(q)
-    
-    preds = np.empty(len(Xte), float)
-    for i, (x, y) in enumerate(zip(Xte, yte)):
-        # Predict
-        theta_pred, P_pred = predict(theta, P, Q)
-        # One-step-ahead prediction (no leakage)
-        preds[i] = float(np.dot(x, theta_pred))
-        # Update with observed target
-        theta, P = update(theta_pred, P_pred, y, x, r)
-    
-    return preds
+  <!-- About -->
+  <section id="about" class="py-16 border-t border-white/10">
+    <div class="max-w-6xl mx-auto px-4 grid md:grid-cols-3 gap-10 items-start">
+      <div class="md:col-span-1">
+        <h2 class="text-2xl font-semibold">About</h2>
+      </div>
+      <div class="md:col-span-2 space-y-4 text-slate-300">
+        <p>
+          I build learning systems across quantum and classical stacks. At <strong>EDF R&D (OSIRIS)</strong>, I explore <em>hybrid quantum–classical reservoirs</em> for adaptive time‑series forecasting and deliver Python workflows with GAMs and Kalman Filters.
+        </p>
+        <p>
+          Previously at <strong>Quandela × Crédit Agricole CIB</strong>, I engineered a <em>photonic quantum classifier</em> (Perceval) for fallen‑angel detection and integrated quantum weak learners in a hybrid boosting ensemble—achieving <strong>+2.4% precision at fixed recall</strong> vs the bank’s baseline. Earlier, I worked at <strong>Enovasense</strong> on optical simulations, feature reduction, and an image‑processing desktop app.
+        </p>
+        <p>
+          I trained at <strong>Institut d’Optique</strong> (engineering degree), completed a research year in quantum computing at <strong>ENS Paris‑Saclay</strong> (ARTeQ), and I’m finishing an <strong>MSc (QLMN)</strong> at <strong>Université Paris‑Saclay</strong>.
+        </p>
+      </div>
+    </div>
+  </section>
 
-# Load reservoir states
-states_df = pd.read_csv('reservoir_states_general_d1d7_tempsm95_dtw.csv')
-states_df['date'] = pd.to_datetime(states_df['date'])
+  <!-- Experience -->
+  <section id="experience" class="py-16 border-t border-white/10">
+    <div class="max-w-6xl mx-auto px-4">
+      <h2 class="text-2xl font-semibold mb-8">Experience</h2>
+      <div class="grid md:grid-cols-3 gap-6">
+        <article class="glass rounded-2xl p-6">
+          <header class="flex items-center justify-between">
+            <h3 class="font-semibold">EDF R&D — OSIRIS (Forecasting)</h3>
+            <span class="text-xs text-slate-400">Mar 2025 – Present · Palaiseau</span>
+          </header>
+          <ul class="mt-4 space-y-2 text-sm text-slate-300 list-disc list-inside">
+            <li>Hybrid quantum‑classical reservoirs for adaptive time‑series forecasting.</li>
+            <li>Python ML workflows combining GAMs, Kalman Filters, and reservoirs.</li>
+            <li>Integration with EDF analytics infrastructure for adaptive learning.</li>
+          </ul>
+        </article>
+        <article class="glass rounded-2xl p-6">
+          <header class="flex items-center justify-between">
+            <h3 class="font-semibold">Quandela × Crédit Agricole CIB</h3>
+            <span class="text-xs text-slate-400">Feb 2024 – Aug 2024 · Paris area</span>
+          </header>
+          <ul class="mt-4 space-y-2 text-sm text-slate-300 list-disc list-inside">
+            <li>Photonic quantum classifier (Perceval) for credit‑risk “fallen angels”.</li>
+            <li>Hybrid boosting with quantum weak learners; benchmark vs XGBoost/RF & quantum baselines.</li>
+            <li>+2.4% precision at fixed recall vs production baseline; pilotable Perceval pipeline & docs.</li>
+          </ul>
+        </article>
+        <article class="glass rounded-2xl p-6">
+          <header class="flex items-center justify-between">
+            <h3 class="font-semibold">Enovasense — Data Science, R&D</h3>
+            <span class="text-xs text-slate-400">May 2023 – Aug 2023 · Paris</span>
+          </header>
+          <ul class="mt-4 space-y-2 text-sm text-slate-300 list-disc list-inside">
+            <li>Optical simulations for coating thickness measurement.</li>
+            <li>Feature reduction & interpretability for predictive models.</li>
+            <li>Desktop image‑processing app for large‑sample assessment.</li>
+          </ul>
+        </article>
+      </div>
+    </div>
+  </section>
 
-# Load Load data from experts file
-load_df = pd.read_csv('final_experts_with_rf.csv')
-load_df['date'] = pd.to_datetime(load_df['date'])
+  <!-- Projects -->
+  <section id="projects" class="py-16 border-t border-white/10">
+    <div class="max-w-6xl mx-auto px-4">
+      <h2 class="text-2xl font-semibold mb-8">Selected Projects</h2>
+      <div class="grid md:grid-cols-2 gap-6">
+        <article class="glass rounded-2xl p-6 hover:-translate-y-0.5 transition">
+          <h3 class="font-semibold">Statistical Arbitrage Pairs Trading — Kalman Filter Spread</h3>
+          <p class="mt-2 text-sm text-slate-300">Pairs trading with time‑varying hedge ratio via Kalman filter; trades mean‑reversion in residual spread; robustness evals and helper lib.</p>
+          <div class="mt-3 flex gap-2 text-xs">
+            <span class="tag">Python</span><span class="tag">Kalman</span><span class="tag">Finance</span>
+          </div>
+          <a class="mt-4 inline-block underline text-sky-300" target="_blank" href="https://github.com/melaz2888/Stat_arb_pair_kalman">Repo →</a>
+        </article>
+        <article class="glass rounded-2xl p-6 hover:-translate-y-0.5 transition">
+          <h3 class="font-semibold">Photonic Quantum Classifier for Fallen‑Angel Detection</h3>
+          <p class="mt-2 text-sm text-slate-300">Perceval‑based quantum classifier integrated as a weak learner in a hybrid boosting ensemble; benchmarked vs classical & quantum baselines; internal pilot.</p>
+          <div class="mt-3 flex gap-2 text-xs">
+            <span class="tag">Perceval</span><span class="tag">Quantum ML</span><span class="tag">Boosting</span>
+          </div>
+        </article>
+        <article class="glass rounded-2xl p-6 hover:-translate-y-0.5 transition md:col-span-2">
+          <h3 class="font-semibold">TIPE & Docs — Markov Chains in Epidemiology; Physics Nobel 2022</h3>
+          <p class="mt-2 text-sm text-slate-300">Coursework & presentations hosted on your Pages repo.</p>
+          <div class="mt-3 flex flex-wrap gap-3 text-xs">
+            <a class="tag hover:brightness-110" target="_blank" href="https://melaz2888.github.io/Markov_chain_Epidemiology.pdf">Markov_chain_Epidemiology.pdf</a>
+            <a class="tag hover:brightness-110" target="_blank" href="https://melaz2888.github.io/Physic_Nobel_2022_FV_0.pdf">Physic_Nobel_2022_FV_0.pdf</a>
+          </div>
+        </article>
+      </div>
+    </div>
+  </section>
 
-# Merge the dataframes on date
-full_df = states_df.merge(load_df[['date', 'Load', 'qrc_lin_readout', 'qrc_rf_readout']], on='date', how='inner')
+  <!-- Skills -->
+  <section id="skills" class="py-16 border-t border-white/10">
+    <div class="max-w-6xl mx-auto px-4">
+      <h2 class="text-2xl font-semibold mb-6">Skills</h2>
+      <div class="grid sm:grid-cols-2 lg:grid-cols-4 gap-3 text-sm">
+        <div class="glass rounded-xl p-4">Python · R · Git</div>
+        <div class="glass rounded-xl p-4">NumPy · pandas · scikit‑learn</div>
+        <div class="glass rounded-xl p-4">Perceval · Qiskit</div>
+        <div class="glass rounded-xl p-4">GAMs · Kalman Filters</div>
+        <div class="glass rounded-xl p-4">Time‑Series Forecasting</div>
+        <div class="glass rounded-xl p-4">Statistical Modeling</div>
+        <div class="glass rounded-xl p-4">Signal Processing</div>
+        <div class="glass rounded-xl p-4">Cloud & HPC exposure</div>
+      </div>
+    </div>
+  </section>
 
-print(f"Merged dataframe shape: {full_df.shape}")
+  <!-- Education & Languages -->
+  <section class="py-16 border-t border-white/10">
+    <div class="max-w-6xl mx-auto px-4 grid md:grid-cols-2 gap-6">
+      <div>
+        <h2 class="text-2xl font-semibold mb-4">Education</h2>
+        <ul class="space-y-3 text-sm">
+          <li class="glass rounded-xl p-4">
+            <div class="font-medium">Université Paris‑Saclay — MSc QLMN, Quantum Physics</div>
+            <div class="text-slate-400">2024 – 2025</div>
+          </li>
+          <li class="glass rounded-xl p-4">
+            <div class="font-medium">ENS Paris‑Saclay — ARTeQ (Research Year, Quantum Computing)</div>
+            <div class="text-slate-400">2023 – 2024</div>
+          </li>
+          <li class="glass rounded-xl p-4">
+            <div class="font-medium">Institut d’Optique Graduate School — Engineering Degree</div>
+            <div class="text-slate-400">2021 – 2025</div>
+          </li>
+          <li class="glass rounded-xl p-4">
+            <div class="font-medium">CPGE MPSI‑MP — Omar Ibn Al Khattab</div>
+            <div class="text-slate-400">2019 – 2021</div>
+          </li>
+        </ul>
+      </div>
+      <div>
+        <h2 class="text-2xl font-semibold mb-4">Languages & Volunteering</h2>
+        <ul class="space-y-3 text-sm">
+          <li class="glass rounded-xl p-4">French (Native) · Arabic (Native) · English (Professional) · Japanese (Basic)</li>
+          <li class="glass rounded-xl p-4">Treasurer — SupOp‑Maroc (2022–2023)</li>
+          <li class="glass rounded-xl p-4">Math & Physics Tutor — Institut Villebon (2021–2022)</li>
+        </ul>
+      </div>
+    </div>
+  </section>
 
-# Define time periods
-TRAIN_START = pd.Timestamp("2018-01-01T00:00:00Z")
-TRAIN_END = pd.Timestamp("2020-03-10T23:30:00Z")
-TEST_START = pd.Timestamp("2020-03-11T00:00:00Z")
-TEST_END = pd.Timestamp("2024-09-12T23:30:00Z")
+  <!-- Contact / Hire me -->
+  <section id="contact" class="py-16 border-t border-white/10">
+    <div class="max-w-6xl mx-auto px-4 text-center">
+      <h2 class="text-2xl font-semibold">Hire me</h2>
+      <p class="mt-2 text-slate-300">Open to roles in data science, quantitative research, and quantum ML.</p>
+      <div class="mt-6 flex items-center justify-center gap-3">
+        <a class="bg-sky-500 hover:bg-sky-400 text-slate-900 font-medium px-5 py-2 rounded-xl" href="mailto:mohammedelazhar@hotmail.com">Email Me</a>
+        <a class="glass px-5 py-2 rounded-xl border border-white/10" target="_blank" href="https://github.com/melaz2888">GitHub</a>
+        <a class="glass px-5 py-2 rounded-xl border border-white/10" target="_blank" href="https://www.linkedin.com/in/mohammed-el-azhar-45836715a">LinkedIn</a>
+      </div>
+      <p class="mt-6 text-xs text-slate-500">© <span id="y"></span> Mohammed El Azhar. Built with Tailwind.</p>
+    </div>
+  </section>
 
-window_mask = (full_df["date"] >= TRAIN_START) & (full_df["date"] <= TEST_END)
-full_df = full_df.loc[window_mask].reset_index(drop=True)
-train_mask = (full_df["date"] >= TRAIN_START) & (full_df["date"] <= TRAIN_END)
-test_mask = (full_df["date"] >= TEST_START) & (full_df["date"] <= TEST_END)
+  <footer class="py-6"></footer>
 
-# Get reservoir state columns (state_0, state_1, etc.)
-state_cols = [col for col in full_df.columns if col.startswith('state_')]
-print(f"Using {len(state_cols)} reservoir state features: {state_cols}")
-
-# Check if we have state columns
-if not state_cols:
-    raise ValueError("No columns starting with 'state_' found in the data")
-
-# Create result dataframe
-result_df = full_df.copy()
-result_df['qrc_online_readout'] = np.nan
-
-# Storage for RMSE per slot
-slot_rmse_data = []
-
-# Process each of 48 half-hour slots
-for slot in range(48):
-    slot_indices = list(range(slot, len(full_df), 48))
-    slot_df = full_df.iloc[slot_indices].copy()
-    
-    slot_train_mask = train_mask[slot_indices]
-    slot_test_mask = test_mask[slot_indices]
-    
-    # Get clean data for this slot
-    slot_train = slot_df[slot_train_mask].dropna(subset=['Load'] + state_cols)
-    slot_test = slot_df[slot_test_mask].dropna(subset=['Load'] + state_cols)
-    
-    if len(slot_train) == 0 or len(slot_test) == 0:
-        print(f"Skipping slot {slot}: insufficient data (train: {len(slot_train)}, test: {len(slot_test)})")
-        continue
-    
-    # Extract features and targets
-    train_features = slot_train[state_cols].values
-    train_targets = slot_train['Load'].values
-    test_features = slot_test[state_cols].values
-    test_targets = slot_test['Load'].values
-    
-    # Set noise parameters based on training data - FIXED calculation
-    try:
-        temp_reg = LinearRegression(fit_intercept=False).fit(train_features, train_targets)
-        train_residuals = train_targets - temp_reg.predict(train_features)
-        
-        # Fixed variance calculation
-        if len(train_residuals) > max(1, len(state_cols)):
-            train_var = float(np.var(train_residuals, ddof=len(state_cols)))
-            if train_var <= 0 or not np.isfinite(train_var):
-                train_var = 1.0
-        else:
-            train_var = 1.0
-        
-        q = 1e-4   # process variance (tune per slot if you like)
-        r = train_var  # simple, sensible default for observation variance
-        
-        # Run online readout (choose fit_intercept=False unless you explicitly want one)
-        online_predictions = run_online_readout(
-            train_features, train_targets,
-            test_features,  test_targets,
-            q=q, r=r, p0_scale=1.0,
-            fit_intercept=False
-        )
-        
-        # Update result dataframe
-        test_indices = slot_test.index
-        for i, idx in enumerate(test_indices):
-            result_df.loc[idx, 'qrc_online_readout'] = online_predictions[i]
-        
-        # Calculate RMSE for this slot
-        # Compare with offline linear readout
-        rmse_offline = np.sqrt(np.mean((slot_test['Load'].values - slot_test['qrc_lin_readout'].values)**2))
-        rmse_online = np.sqrt(np.mean((test_targets - online_predictions)**2))
-        
-        slot_rmse_data.append({
-            'slot': slot,
-            'offline': rmse_offline,
-            'online': rmse_online
-        })
-        
-    except Exception as e:
-        print(f"Error processing slot {slot}: {e}")
-        continue
-
-# Save results
-result_df.to_csv('predictions_with_online_readout.csv', index=False)
-
-# Calculate global RMSE on test set
-test_data = result_df[test_mask].dropna(subset=['Load', 'qrc_online_readout', 'qrc_lin_readout'])
-
-if len(test_data) == 0:
-    print("Warning: No test data available after filtering")
-else:
-    global_rmse_offline = np.sqrt(np.mean((test_data['Load'] - test_data['qrc_lin_readout'])**2))
-    global_rmse_online = np.sqrt(np.mean((test_data['Load'] - test_data['qrc_online_readout'])**2))
-
-    # Create plot
-    if slot_rmse_data:  # Only plot if we have data
-        slot_rmse_df = pd.DataFrame(slot_rmse_data)
-
-        fig, (ax1, ax2) = plt.subplots(1, 2, figsize=(15, 6))
-
-        # RMSE by slot
-        slots = slot_rmse_df['slot'].values
-        ax1.plot(slots, slot_rmse_df['offline'], 'b-', label='QRC Linear', marker='o', markersize=3)
-        ax1.plot(slots, slot_rmse_df['online'], 'r-', label='Online Readout', marker='s', markersize=3)
-        ax1.axhline(y=global_rmse_offline, color='b', linestyle='--', alpha=0.7, 
-                   label=f'Global Linear: {global_rmse_offline:.2f}')
-        ax1.axhline(y=global_rmse_online, color='r', linestyle='--', alpha=0.7, 
-                   label=f'Global Online: {global_rmse_online:.2f}')
-        ax1.set_xlabel('Half-hour Slot')
-        ax1.set_ylabel('RMSE')
-        ax1.set_title('QRC Online Readout: RMSE by Slot')
-        ax1.legend()
-        ax1.grid(True, alpha=0.3)
-        ax1.set_xticks(range(0, 48, 6))
-
-        # Improvement percentage
-        improvement = (1 - slot_rmse_df['online'] / slot_rmse_df['offline']) * 100
-        ax2.bar(slots, improvement, alpha=0.7, color='green')
-        ax2.axhline(y=0, color='k', linestyle='--', alpha=0.3)
-        global_improvement = (1 - global_rmse_online / global_rmse_offline) * 100
-        ax2.axhline(y=global_improvement, color='red', linestyle='--', alpha=0.7,
-                   label=f'Global Improvement: {global_improvement:.1f}%')
-        ax2.set_xlabel('Half-hour Slot')
-        ax2.set_ylabel('RMSE Improvement (%)')
-        ax2.set_title('Online vs Offline Readout Improvement')
-        ax2.legend()
-        ax2.grid(True, alpha=0.3)
-        ax2.set_xticks(range(0, 48, 6))
-
-        plt.tight_layout()
-        plt.show()
-
-        print(f"Global RMSE Results:")
-        print(f"QRC Linear (offline): {global_rmse_offline:.3f}")
-        print(f"QRC Online Readout: {global_rmse_online:.3f}")
-        print(f"Improvement: {global_improvement:.1f}%")
-    else:
-        print("No slot data to plot")
-
-print(f"Saved results to: predictions_with_online_readout.csv")
+  <script>
+    document.getElementById('themeToggle').addEventListener('click', () => {
+      const root = document.documentElement;
+      const isDark = root.classList.toggle('dark');
+      localStorage.setItem('theme', isDark ? 'dark' : 'light');
+      document.body.classList.toggle('bg-white');
+    });
+    document.getElementById('y').textContent = new Date().getFullYear();
+  </script>
+</body>
+</html>
